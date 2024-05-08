@@ -12,17 +12,21 @@ using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using System.Threading;
 using System.IO;
+using System.Threading;
+using System.Runtime.InteropServices;
+using System.Drawing.Imaging;
 
 namespace SendVideoToH263
 {
     public partial class Form1 : Form
     {
-
         private VideoCapture _capture;
+
         private H263VideoStreamEncoder _encoder;
         private Thread _videoThread;
         private Thread _changeThread;
-             
+        private byte[] encodedFrame;
+
         public Form1()
         {
             FFmpegBinariesHelper.RegisterFFmpegBinaries();
@@ -45,42 +49,28 @@ namespace SendVideoToH263
             _changeThread.Start();
         }
 
-        private void ChangeVideo()
+        private unsafe void ChangeVideo()
         {
-            if (_encoder == null)
-            {
-                MessageBox.Show("실시간 영상이 아직 출력되고 있지 않습니다.", "알림",
-                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
 
             using (Mat frame = new Mat())
             {
-                while(true)
+                while (true)
                 {
                     _capture.Read(frame);
                     if (!frame.Empty())
                     {
-                        byte[] encodedFrame = _encoder.EncodeFrame(frame);
-                        Mat decodedFrame = _encoder.DecodeFrame(encodedFrame);
-
-                        pictureBox2.Invoke(new Action(() =>
-                        {
-                            pictureBox2.Image = decodedFrame.ToBitmap();
-                        }));
+                        ChangeToH263(frame);
                     }
-                }              
+                }
             }
         }
 
 
         private void PlayVideo()
         {
-            _encoder = new H263VideoStreamEncoder(25, new System.Drawing.Size(704, 576));
-
             using (Mat frame = new Mat())
             {
-                while(true)
+                while (true)
                 {
                     _capture.Read(frame);
                     if (frame.Empty())
@@ -94,8 +84,86 @@ namespace SendVideoToH263
                         pictureBox1.Image = Image.FromStream(stream);
 
                     }));
+
+                    Thread.Sleep(30);
                 }
             }
         }
+
+
+        private unsafe void ChangeToH263(Mat frame)
+        {
+            var fps = 25;
+            var sourceSize = new System.Drawing.Size(704, 576);
+            var sourcePixelFormat = AVPixelFormat.AV_PIX_FMT_BGR24;
+            var destinationSize = sourceSize;
+            var destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P;
+            var stream = frame.ToMemoryStream();
+            using (var vfc = new VideoFrameConverter(sourceSize, sourcePixelFormat, destinationSize, destinationPixelFormat))
+            {
+                using (var vse = new H263VideoStreamEncoder(stream, fps, destinationSize))
+                {
+                    byte[] bitmapData;
+
+                    using (var frameImage = Image.FromStream(stream))
+                    using (var frameBitmap = frameImage is Bitmap bitmap ? bitmap : new Bitmap(frameImage))
+                    {
+                        bitmapData = GetBitmapData(frameBitmap);
+                    }
+
+                    fixed (byte* pBitmapData = bitmapData)
+                    {
+                        var data = new byte_ptrArray8 { [0] = pBitmapData };
+                        var linesize = new int_array8 { [0] = bitmapData.Length / sourceSize.Height };
+                        var avframe = new AVFrame
+                        {
+                            data = data,
+                            linesize = linesize,
+                            height = sourceSize.Height
+                        };
+
+                        var convertedFrame = vfc.Convert(avframe);
+                        byte[] encodedData = vse.Encode(convertedFrame);
+
+                        Mat chframe = vse.DecodeFrame(encodedData);
+
+                        while(true)
+                        {
+                            _capture.Read(chframe);
+                            if (chframe.Empty())
+                                break;
+
+                            pictureBox2.Invoke(new Action(() =>
+                            {
+                                MemoryStream chstream = new MemoryStream();
+
+                                chstream = chframe.ToMemoryStream();
+                                pictureBox2.Image = Image.FromStream(chstream);
+
+                            }));
+                        }
+                        
+                    }
+                }
+            }
+        }
+
+
+        private byte[] GetBitmapData(Bitmap frameBitmap)
+        {
+            var bitmapData = frameBitmap.LockBits(new Rectangle(System.Drawing.Point.Empty, frameBitmap.Size), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+            try
+            {
+                var length = bitmapData.Stride * bitmapData.Height;
+                var data = new byte[length];
+                Marshal.Copy(bitmapData.Scan0, data, 0, length);
+                return data;
+            }
+            finally
+            {
+                frameBitmap.UnlockBits(bitmapData);
+            }
+        }
+
     }
 }
