@@ -8,44 +8,50 @@ namespace FFmpeg.AutoGen.Example
     public sealed unsafe class VideoStreamDecoder : IDisposable
     {
         private readonly AVCodecContext* _pCodecContext;
+        private readonly AVFormatContext* _pFormatContext;
+        private readonly int _streamIndex;
         private readonly AVFrame* _pFrame;
         private readonly AVPacket* _pPacket;
 
-        public VideoStreamDecoder(byte[] encodedData)
+        public VideoStreamDecoder(string url)
         {
-            _pCodecContext = null;
-            _pFrame = ffmpeg.av_frame_alloc();
+            _pFormatContext = ffmpeg.avformat_alloc_context();
+
+            var pFormatContext = _pFormatContext;
+            ffmpeg.avformat_open_input(&pFormatContext, url, null, null);
+
+            ffmpeg.avformat_find_stream_info(_pFormatContext, null);
+
+            // find the first video stream
+            AVStream* pStream = null;
+            for (var i = 0; i < _pFormatContext->nb_streams; i++)
+                if (_pFormatContext->streams[i]->codec->codec_type == AVMediaType.AVMEDIA_TYPE_VIDEO)
+                {
+                    pStream = _pFormatContext->streams[i];
+                    break;
+                }
+
+            if (pStream == null) throw new InvalidOperationException("Could not found video stream.");
+
+            _streamIndex = pStream->index;
+            _pCodecContext = pStream->codec;
+            var codecId = _pCodecContext->codec_id;
+            var pCodec = ffmpeg.avcodec_find_decoder(codecId);
+            if (pCodec == null) throw new InvalidOperationException("Unsupported codec.");
+
+            ffmpeg.avcodec_open2(_pCodecContext, pCodec, null);
+
+            CodecName = ffmpeg.avcodec_get_name(codecId);
+            FrameSize = new Size(_pCodecContext->width, _pCodecContext->height);
+            PixelFormat = _pCodecContext->pix_fmt;
+
             _pPacket = ffmpeg.av_packet_alloc();
-
-            if (_pFrame == null || _pPacket == null)
-            {
-                throw new InvalidOperationException("Failed to allocate frame or packet.");
-            }
-
-            fixed (byte* pData = encodedData)
-            {
-                ffmpeg.av_init_packet(_pPacket);
-                _pPacket->data = pData;
-                _pPacket->size = encodedData.Length;
-
-                var pCodec = ffmpeg.avcodec_find_decoder(AVCodecID.AV_CODEC_ID_H263);
-                if (pCodec == null)
-                {
-                    throw new InvalidOperationException("Unsupported codec.");
-                }
-
-                _pCodecContext = ffmpeg.avcodec_alloc_context3(pCodec);
-                if (_pCodecContext == null)
-                {
-                    throw new InvalidOperationException("Failed to allocate codec context.");
-                }
-
-                if (ffmpeg.avcodec_open2(_pCodecContext, pCodec, null) < 0)
-                {
-                    throw new InvalidOperationException("Failed to open codec.");
-                }
-            }
+            _pFrame = ffmpeg.av_frame_alloc();
         }
+
+        public string CodecName { get; }
+        public Size FrameSize { get; }
+        public AVPixelFormat PixelFormat { get; }
 
         public void Dispose()
         {
@@ -55,45 +61,56 @@ namespace FFmpeg.AutoGen.Example
             ffmpeg.av_packet_unref(_pPacket);
             ffmpeg.av_free(_pPacket);
 
-            if (_pCodecContext != null)
-            {
-                ffmpeg.avcodec_close(_pCodecContext);
-                
-            }
+            ffmpeg.avcodec_close(_pCodecContext);
+            var pFormatContext = _pFormatContext;
+            ffmpeg.avformat_close_input(&pFormatContext);
         }
 
         public bool TryDecodeNextFrame(out AVFrame frame)
         {
-            int error = ffmpeg.avcodec_send_packet(_pCodecContext, _pPacket);
-            if (error < 0)
+            ffmpeg.av_frame_unref(_pFrame);
+            int error;
+            do
             {
-                if (error == ffmpeg.AVERROR(ffmpeg.EAGAIN))
+                try
                 {
-                    frame = *_pFrame;
-                    return false;
-                }
-                else
-                {
-                    throw new InvalidOperationException("Failed to send packet to decoder.");
-                }
-            }
+                    do
+                    {
+                        error = ffmpeg.av_read_frame(_pFormatContext, _pPacket);
+                        if (error == ffmpeg.AVERROR_EOF)
+                        {
+                            frame = *_pFrame;
+                            return false;
+                        }
 
-            error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
-            if (error < 0)
-            {
-                if (error == ffmpeg.AVERROR(ffmpeg.EAGAIN) || error == ffmpeg.AVERROR_EOF)
-                {
-                    frame = *_pFrame;
-                    return false;
+                    } while (_pPacket->stream_index != _streamIndex);
+
+                    ffmpeg.avcodec_send_packet(_pCodecContext, _pPacket);
                 }
-                else
+                finally
                 {
-                    throw new InvalidOperationException("Failed to receive frame from decoder.");
+                    ffmpeg.av_packet_unref(_pPacket);
                 }
-            }
+
+                error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
+            } while (error == ffmpeg.AVERROR(ffmpeg.EAGAIN));
 
             frame = *_pFrame;
             return true;
+        }
+
+        public IReadOnlyDictionary<string, string> GetContextInfo()
+        {
+            AVDictionaryEntry* tag = null;
+            var result = new Dictionary<string, string>();
+            while ((tag = ffmpeg.av_dict_get(_pFormatContext->metadata, "", tag, ffmpeg.AV_DICT_IGNORE_SUFFIX)) != null)
+            {
+                var key = Marshal.PtrToStringAnsi((IntPtr)tag->key);
+                var value = Marshal.PtrToStringAnsi((IntPtr)tag->value);
+                result.Add(key, value);
+            }
+
+            return result;
         }
     }
 }

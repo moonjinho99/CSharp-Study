@@ -6,53 +6,96 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Runtime.InteropServices;
 using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using FFmpeg.AutoGen;
 using System.Drawing;
 using System.Drawing.Imaging;
 
 namespace SendVideoToH263
 {
-    public sealed unsafe class H263VideoStreamDecoder : IDisposable
+    public unsafe class H263VideoStreamDecoder : IDisposable
     {
         private readonly AVCodec* _pCodec;
         private readonly AVCodecContext* _pCodecContext;
+        private readonly AVFrame* _pFrame;
+        private readonly AVPacket* _pPacket;
 
-        static H263VideoStreamDecoder()
+        public H263VideoStreamDecoder()
         {
             ffmpeg.avcodec_register_all();
         }
 
-        public Mat DecodeFrame(byte[] encodedData)
+        public H263VideoStreamDecoder(int fps, System.Drawing.Size frameSize)
         {
-            AVCodec* pCodec = ffmpeg.avcodec_find_decoder(_pCodecContext->codec_id);
-            AVCodecContext* pCodecContext = ffmpeg.avcodec_alloc_context3(pCodec);
+            var codecId = AVCodecID.AV_CODEC_ID_H264;
+            _pCodec = ffmpeg.avcodec_find_decoder(codecId);
 
-            ffmpeg.avcodec_open2(pCodecContext, pCodec, null);
+            _pCodecContext = ffmpeg.avcodec_alloc_context3(_pCodec);
+            _pCodecContext->width = frameSize.Width;
+            _pCodecContext->height = frameSize.Height;
+            _pCodecContext->time_base = new AVRational { num = 1, den = fps };
+            _pCodecContext->pix_fmt = AVPixelFormat.AV_PIX_FMT_BGR24;
 
-            AVFrame* pFrame = ffmpeg.av_frame_alloc();
+            ffmpeg.av_opt_set(_pCodecContext->priv_data, "preset", "veryslow", 0);
 
-            AVPacket packet = new AVPacket();
-            ffmpeg.av_init_packet(&packet);
-            packet.data = (byte*)Marshal.UnsafeAddrOfPinnedArrayElement(encodedData, 0);
-            packet.size = encodedData.Length;
+            ffmpeg.avcodec_open2(_pCodecContext, _pCodec, null);
 
-            ffmpeg.avcodec_send_packet(pCodecContext, &packet);
+            CodecName = ffmpeg.avcodec_get_name(codecId);
+            FrameSize = new System.Drawing.Size(_pCodecContext->width, _pCodecContext->height);
+            PixelFormat = _pCodecContext->pix_fmt;
 
-            while (ffmpeg.avcodec_receive_frame(pCodecContext, pFrame) == 0)
+            _pPacket = ffmpeg.av_packet_alloc();
+            _pFrame = ffmpeg.av_frame_alloc();
+        }
+
+        public string CodecName { get; }
+        public System.Drawing.Size FrameSize { get; }
+        public AVPixelFormat PixelFormat { get; }
+
+        public unsafe bool DecodeFrame(byte[] encodedData, System.Drawing.Size frameSize, out MemoryStream stream)
+        {
+            stream = new MemoryStream();
+            var sourceSize = frameSize;
+            var sourcePixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P;
+            var destinationSize = sourceSize;
+            var destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_BGR24;
+
+            using (var vfc = new VideoFrameConverter(sourceSize, sourcePixelFormat, destinationSize, destinationPixelFormat))
             {
-                Mat decodedFrame = ConvertFrameToMat(pFrame);
+                int error;
+                do
+                {
+                    try
+                    {
+                        fixed (byte* pData = encodedData)
+                        {
+                            AVPacket* pPacket = _pPacket;
+                            ffmpeg.av_init_packet(pPacket);
+                            pPacket->data = pData;
+                            pPacket->size = encodedData.Length;
 
-                ffmpeg.av_frame_unref(pFrame);
-                return decodedFrame;
+                            ffmpeg.avcodec_send_packet(_pCodecContext, pPacket);
+                        }
+                    }
+                    finally
+                    {
+                        ffmpeg.av_packet_unref(_pPacket);
+                    }
+
+                    error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
+                } while (error == ffmpeg.AVERROR(ffmpeg.EAGAIN));
+
+                var mat = ConvertFrameToMat(_pFrame);
+                var image = mat.ToBitmap();
+                image.Save(stream, ImageFormat.Bmp);
+
+                return true;
             }
-
-            return null;
         }
 
         private Mat ConvertFrameToMat(AVFrame* pFrame)
         {
             var frame = new Mat(pFrame->height, pFrame->width, MatType.CV_8UC3);
-            //Console.WriteLine("프레임 사이즈 : " + pFrame->height + " , "+pFrame->width);
             var data = (IntPtr)pFrame->data[0];
             var rawData = new byte[frame.Total()];
             Marshal.Copy(data, rawData, 0, rawData.Length);
@@ -63,9 +106,14 @@ namespace SendVideoToH263
 
         public void Dispose()
         {
+            ffmpeg.av_frame_unref(_pFrame);
+            ffmpeg.av_free(_pFrame);
+
+            ffmpeg.av_packet_unref(_pPacket);
+            ffmpeg.av_free(_pPacket);
+
             ffmpeg.avcodec_close(_pCodecContext);
-            ffmpeg.av_free(_pCodecContext);
-            ffmpeg.av_free(_pCodec);
         }
     }
+
 }

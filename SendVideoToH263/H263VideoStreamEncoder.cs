@@ -34,15 +34,13 @@ namespace SendVideoToH263
             _stream = stream;
             _frameSize = frameSize;
 
-            var codecId = AVCodecID.AV_CODEC_ID_H263;
+            var codecId = AVCodecID.AV_CODEC_ID_H264;
             _pCodec = ffmpeg.avcodec_find_encoder(codecId);
             if (_pCodec == null) throw new InvalidOperationException("Codec not found.");
 
             _pCodecContext = ffmpeg.avcodec_alloc_context3(_pCodec);
             _pCodecContext->width = frameSize.Width;
             _pCodecContext->height = frameSize.Height;
-            /*  _pCodecContext->width = 1408;
-              _pCodecContext->height = 1152;*/
 
             _pCodecContext->time_base = new AVRational { num = 1, den = fps };
             _pCodecContext->pix_fmt = AVPixelFormat.AV_PIX_FMT_YUV420P;
@@ -87,7 +85,6 @@ namespace SendVideoToH263
                     error = ffmpeg.avcodec_receive_packet(_pCodecContext, pPacket);
                 } while (error == ffmpeg.AVERROR(ffmpeg.EAGAIN));
 
-                // Copy packet data to byte array
                 byte[] encodedData = new byte[pPacket->size];
                 Marshal.Copy((IntPtr)pPacket->data, encodedData, 0, pPacket->size);
 
@@ -99,45 +96,6 @@ namespace SendVideoToH263
             }
         }
 
-
-        public Mat DecodeFrame(byte[] encodedData)
-        {
-            AVCodec* pCodec = ffmpeg.avcodec_find_decoder(_pCodecContext->codec_id);
-            AVCodecContext* pCodecContext = ffmpeg.avcodec_alloc_context3(pCodec);
-
-            ffmpeg.avcodec_open2(pCodecContext, pCodec, null);
-
-            AVFrame* pFrame = ffmpeg.av_frame_alloc();
-
-            AVPacket packet = new AVPacket();
-            ffmpeg.av_init_packet(&packet);
-            packet.data = (byte*)Marshal.UnsafeAddrOfPinnedArrayElement(encodedData, 0);
-            packet.size = encodedData.Length;
-
-            ffmpeg.avcodec_send_packet(pCodecContext, &packet);
-
-            while (ffmpeg.avcodec_receive_frame(pCodecContext, pFrame) == 0)
-            {
-                Mat decodedFrame = ConvertFrameToMat(pFrame);
-
-                ffmpeg.av_frame_unref(pFrame);
-                return decodedFrame;
-            }
-
-            return null;
-        }
-
-        private Mat ConvertFrameToMat(AVFrame* pFrame)
-        {
-            var frame = new Mat(pFrame->height, pFrame->width, MatType.CV_8UC3);
-            //Console.WriteLine("프레임 사이즈 : " + pFrame->height + " , "+pFrame->width);
-            var data = (IntPtr)pFrame->data[0];
-            var rawData = new byte[frame.Total()];
-            Marshal.Copy(data, rawData, 0, rawData.Length);
-            Marshal.Copy(rawData, 0, frame.Data, rawData.Length);
-
-            return frame;
-        }
 
         private static byte[] GetBitmapData(Bitmap frameBitmap)
         {
