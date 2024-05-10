@@ -85,23 +85,12 @@ namespace SendVideoToH263
                     error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
                 } while (error == ffmpeg.AVERROR(ffmpeg.EAGAIN));
 
-                var mat = ConvertFrameToMat(_pFrame);
-                var image = mat.ToBitmap();
-                image.Save(stream, ImageFormat.Bmp);
+                var convertedFrame = vfc.Convert(*_pFrame);
+                using (var bitmap = new Bitmap(convertedFrame.width, convertedFrame.height, convertedFrame.linesize[0], System.Drawing.Imaging.PixelFormat.Format24bppRgb, (IntPtr)convertedFrame.data[0]))
+                    bitmap.Save(stream, ImageFormat.Jpeg);
 
                 return true;
             }
-        }
-
-        private Mat ConvertFrameToMat(AVFrame* pFrame)
-        {
-            var frame = new Mat(pFrame->height, pFrame->width, MatType.CV_8UC3);
-            var data = (IntPtr)pFrame->data[0];
-            var rawData = new byte[frame.Total()];
-            Marshal.Copy(data, rawData, 0, rawData.Length);
-            Marshal.Copy(rawData, 0, frame.Data, rawData.Length);
-
-            return frame;
         }
 
         public void Dispose()

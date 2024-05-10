@@ -138,14 +138,6 @@ namespace SendVideoToH263
         {
             using (H263VideoStreamDecoder decoder = new H263VideoStreamDecoder(25, new System.Drawing.Size(frame.Width, frame.Height)))
             {
-                /* decoder.DecodeFrame(encodedData, decoder.FrameSize, out AVFrame avframe);
-                 var mat = new Mat(avframe.height, avframe.width, MatType.CV_8UC3, (IntPtr)avframe.data[0]);
-
-                 return mat;*/
-                /* decoder.DecodeFrame(encodedData, new System.Drawing.Size(frame.Width, frame.Height), out Mat mat);
-
-                 pictureBox2.Image = Image.FromStream(mat.ToMemoryStream());*/
-
                 decoder.DecodeFrame(encodedData, decoder.FrameSize, out MemoryStream stream);
 
                 pictureBox2.Image = Image.FromStream(stream);

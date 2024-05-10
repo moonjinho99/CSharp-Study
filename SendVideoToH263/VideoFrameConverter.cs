@@ -34,6 +34,7 @@ namespace SendVideoToH263
             _dstLinesize = new int_array4();
 
             ffmpeg.av_image_fill_arrays(ref _dstData, ref _dstLinesize, (byte*)_convertedFrameBufferPtr, destinationPixelFormat, destinationSize.Width, destinationSize.Height, 1);
+        
         }
 
         public void Dispose()
