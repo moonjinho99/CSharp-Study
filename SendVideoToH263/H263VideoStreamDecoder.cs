@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Runtime.InteropServices;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
 using FFmpeg.AutoGen;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -27,7 +26,7 @@ namespace SendVideoToH263
 
         public H263VideoStreamDecoder(int fps, System.Drawing.Size frameSize)
         {
-            var codecId = AVCodecID.AV_CODEC_ID_H264;
+            var codecId = AVCodecID.AV_CODEC_ID_H263;
             _pCodec = ffmpeg.avcodec_find_decoder(codecId);
 
             _pCodecContext = ffmpeg.avcodec_alloc_context3(_pCodec);
@@ -35,8 +34,6 @@ namespace SendVideoToH263
             _pCodecContext->height = frameSize.Height;
             _pCodecContext->time_base = new AVRational { num = 1, den = fps };
             _pCodecContext->pix_fmt = AVPixelFormat.AV_PIX_FMT_BGR24;
-
-            ffmpeg.av_opt_set(_pCodecContext->priv_data, "preset", "veryslow", 0);
 
             ffmpeg.avcodec_open2(_pCodecContext, _pCodec, null);
 

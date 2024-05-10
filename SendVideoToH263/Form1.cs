@@ -27,7 +27,6 @@ namespace SendVideoToH263
         private Thread _changeThread;
         private byte[] encodedData;
 
-
         public Form1()
         {
             FFmpegBinariesHelper.RegisterFFmpegBinaries();
@@ -36,12 +35,13 @@ namespace SendVideoToH263
 
         private void startBtn_Click(object sender, EventArgs e)
         {
-            _capture = new VideoCapture(0);
+            _capture = new CustomVideoCapture(1);
 
             _videoThread = new Thread(PlayVideo);
             _videoThread.IsBackground = true;
             _videoThread.Start();
         }
+
 
         private void ChangeBtn_Click(object sender, EventArgs e)
         {
@@ -59,10 +59,15 @@ namespace SendVideoToH263
                     _capture.Read(frame);
                     if (!frame.Empty())
                     {
-                        encodedData = EncodeToH263(frame);
-                        DecodeToH263(encodedData, frame);
+                        Bitmap image = frame.ToBitmap();
+                        image = new Bitmap(image, new System.Drawing.Size(704, 576));
+
+                        encodedData = EncodeToH263(image);
+
+                        DecodeToH263(encodedData, image);
                     }
                 }
+                Thread.Sleep(30);
             }
         }
 
@@ -74,6 +79,7 @@ namespace SendVideoToH263
                 while (true)
                 {
                     _capture.Read(frame);
+
                     if (frame.Empty())
                         break;
 
@@ -91,14 +97,14 @@ namespace SendVideoToH263
         }
 
 
-        private unsafe byte[] EncodeToH263(Mat frame)
+        private unsafe byte[] EncodeToH263(Bitmap encodeBitmap)
         {
             var fps = 25;
-            var sourceSize = new System.Drawing.Size(frame.Width, frame.Height);
+            var sourceSize = new System.Drawing.Size(encodeBitmap.Width, encodeBitmap.Height);
             var sourcePixelFormat = AVPixelFormat.AV_PIX_FMT_BGR24;
             var destinationSize = sourceSize;
             var destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P;
-            var stream = frame.ToMemoryStream();
+            var stream = encodeBitmap.ToMat().ToMemoryStream();
             using (var vfc = new VideoFrameConverter(sourceSize, sourcePixelFormat, destinationSize, destinationPixelFormat))
             {
                 using (var vse = new H263VideoStreamEncoder(stream, fps, destinationSize))
@@ -110,6 +116,7 @@ namespace SendVideoToH263
                     {
                         bitmapData = GetBitmapData(frameBitmap);
                     }
+
 
                     fixed (byte* pBitmapData = bitmapData)
                     {
@@ -126,7 +133,6 @@ namespace SendVideoToH263
 
                         byte[] byteData = vse.Encode(convertedFrame);
 
-                        SaveEncodedDataToFile(byteData, @"D:\media\encoded_video.h264");
                         return byteData;
                                              
                     }
@@ -134,9 +140,9 @@ namespace SendVideoToH263
             }
         }
 
-        private unsafe void DecodeToH263(byte[] encodedData, Mat frame)
+        private unsafe void DecodeToH263(byte[] encodedData, Bitmap decodeBitmap)
         {
-            using (H263VideoStreamDecoder decoder = new H263VideoStreamDecoder(25, new System.Drawing.Size(frame.Width, frame.Height)))
+            using (H263VideoStreamDecoder decoder = new H263VideoStreamDecoder(25, new System.Drawing.Size(decodeBitmap.Width, decodeBitmap.Height)))
             {
                 decoder.DecodeFrame(encodedData, decoder.FrameSize, out MemoryStream stream);
 
@@ -160,10 +166,10 @@ namespace SendVideoToH263
             }
         }
 
-        public void SaveEncodedDataToFile(byte[] data, string filePath)
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            // 바이트 배열을 파일에 씁니다.
-            File.WriteAllBytes(filePath, data);
+            _videoThread.Abort();
+            _changeThread.Abort();
         }
     }
 }

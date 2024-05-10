@@ -34,7 +34,7 @@ namespace SendVideoToH263
             _stream = stream;
             _frameSize = frameSize;
 
-            var codecId = AVCodecID.AV_CODEC_ID_H264;
+            var codecId = AVCodecID.AV_CODEC_ID_H263;
             _pCodec = ffmpeg.avcodec_find_encoder(codecId);
             if (_pCodec == null) throw new InvalidOperationException("Codec not found.");
 
@@ -44,10 +44,9 @@ namespace SendVideoToH263
 
             _pCodecContext->time_base = new AVRational { num = 1, den = fps };
             _pCodecContext->pix_fmt = AVPixelFormat.AV_PIX_FMT_YUV420P;
-            ffmpeg.av_opt_set(_pCodecContext->priv_data, "preset", "veryslow", 0);
 
             ffmpeg.avcodec_open2(_pCodecContext, _pCodec, null);
-
+            
             _linesizeY = frameSize.Width;
             _linesizeU = frameSize.Width / 2;
             _linesizeV = frameSize.Width / 2;
