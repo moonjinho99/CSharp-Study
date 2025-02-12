@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.34601.136
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecurityToAES256", "SecurityToAES256\SecurityToAES256.csproj", "{9E19BC42-1B26-4F0F-8422-66E36C5F1A68}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecurityToAES256_receive", "SecurityToAES256_receive\SecurityToAES256_receive.csproj", "{192957F4-041A-43BE-B460-8D733C73A707}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9E19BC42-1B26-4F0F-8422-66E36C5F1A68}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E19BC42-1B26-4F0F-8422-66E36C5F1A68}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E19BC42-1B26-4F0F-8422-66E36C5F1A68}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E19BC42-1B26-4F0F-8422-66E36C5F1A68}.Release|Any CPU.Build.0 = Release|Any CPU
+		{192957F4-041A-43BE-B460-8D733C73A707}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{192957F4-041A-43BE-B460-8D733C73A707}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{192957F4-041A-43BE-B460-8D733C73A707}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{192957F4-041A-43BE-B460-8D733C73A707}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {68609E33-1B0C-4967-912B-77628D6EB92A}
+	EndGlobalSection
+EndGlobal
