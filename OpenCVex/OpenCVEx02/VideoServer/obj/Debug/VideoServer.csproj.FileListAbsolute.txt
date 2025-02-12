@@ -1,0 +1,7 @@
+D:\Cstudy\chapter7\OpenCVEx02\VideoServer\bin\Debug\VideoServer.exe.config
+D:\Cstudy\chapter7\OpenCVEx02\VideoServer\bin\Debug\VideoServer.exe
+D:\Cstudy\chapter7\OpenCVEx02\VideoServer\bin\Debug\VideoServer.pdb
+D:\Cstudy\chapter7\OpenCVEx02\VideoServer\obj\Debug\VideoServer.csproj.AssemblyReference.cache
+D:\Cstudy\chapter7\OpenCVEx02\VideoServer\obj\Debug\VideoServer.csproj.CoreCompileInputs.cache
+D:\Cstudy\chapter7\OpenCVEx02\VideoServer\obj\Debug\VideoServer.exe
+D:\Cstudy\chapter7\OpenCVEx02\VideoServer\obj\Debug\VideoServer.pdb

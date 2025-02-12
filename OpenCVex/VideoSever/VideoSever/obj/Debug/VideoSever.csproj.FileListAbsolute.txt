@@ -1,0 +1,7 @@
+D:\Cstudy\chapter7\VideoSever\VideoSever\bin\Debug\VideoSever.exe.config
+D:\Cstudy\chapter7\VideoSever\VideoSever\bin\Debug\VideoSever.exe
+D:\Cstudy\chapter7\VideoSever\VideoSever\bin\Debug\VideoSever.pdb
+D:\Cstudy\chapter7\VideoSever\VideoSever\obj\Debug\VideoSever.csproj.AssemblyReference.cache
+D:\Cstudy\chapter7\VideoSever\VideoSever\obj\Debug\VideoSever.csproj.CoreCompileInputs.cache
+D:\Cstudy\chapter7\VideoSever\VideoSever\obj\Debug\VideoSever.exe
+D:\Cstudy\chapter7\VideoSever\VideoSever\obj\Debug\VideoSever.pdb
