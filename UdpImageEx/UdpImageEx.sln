@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.34729.46
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UdpImageEx", "UdpImageEx\UdpImageEx.csproj", "{5145FB1F-21CD-4A6E-A9D5-9BB42D062446}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageReceive", "ImageReceive\ImageReceive.csproj", "{AAE0767A-DBC0-4E7C-8AFC-C78E2E698947}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5145FB1F-21CD-4A6E-A9D5-9BB42D062446}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5145FB1F-21CD-4A6E-A9D5-9BB42D062446}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5145FB1F-21CD-4A6E-A9D5-9BB42D062446}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5145FB1F-21CD-4A6E-A9D5-9BB42D062446}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AAE0767A-DBC0-4E7C-8AFC-C78E2E698947}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAE0767A-DBC0-4E7C-8AFC-C78E2E698947}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAE0767A-DBC0-4E7C-8AFC-C78E2E698947}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAE0767A-DBC0-4E7C-8AFC-C78E2E698947}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7C7D65FF-2B36-4C04-AB7A-502ACB8919E8}
+	EndGlobalSection
+EndGlobal
